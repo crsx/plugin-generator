@@ -6,7 +6,7 @@ Domain Specific Language files used either for or with CRSX.
 
 There are two kinds of plugins we are working to generate:
 
-1. PG-defined Domain Specific Language
+(1) PG-defined Domain Specific Language
 
 > A PG file defines  a  domain specific  language,  generally for  a
 > compiler intermediate format, and once the PG file has been defined,
@@ -17,7 +17,7 @@ There are two kinds of plugins we are working to generate:
 > of this format, the GUI plugins for the various development
 > environments should be able to be auto-generated.
 
-2. CRSX rule definition files
+(2) CRSX rule definition files
 
 > One special feature of CRSX is the ability to use the "native"
 > format defined in the PG file within CRSX rules definitions.
