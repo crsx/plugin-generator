@@ -1,0 +1,876 @@
+/* Copyright (c) 2007,2010 IBM Corporation.
+   Copyright (c) 2014 Kristoffer H. Rose.
+   Modified to parse pg to object representation in 2015 by J. Sebechlebsky*/
+
+// JavaCC options.
+options {
+    JDK_VERSION = "1.8";
+    STATIC = false;
+    ERROR_REPORTING = true;
+    JAVA_UNICODE_ESCAPE = false;
+    UNICODE_INPUT = true;
+    BUILD_PARSER = true;
+    BUILD_TOKEN_MANAGER = true;
+    SANITY_CHECK = true;
+    FORCE_LA_CHECK = true;
+    KEEP_LINE_COLUMN = true;
+    GENERATE_GENERICS = true;
+    //DEBUG_PARSER = true;
+    //DEBUG_TOKEN_MANAGER = true;
+}
+
+
+PARSER_BEGIN(PGParser)
+package net.sf.crsx.pgutil.pgparser;
+
+import java.io.IOException;
+import java.util.List;
+import java.util.ArrayList;
+
+import net.sf.crsx.pgutil.pggrammar.*;
+
+public class PGParser {
+
+  //Helper function to get rid of quotes
+  private static String unwrap(String str)
+  {
+    if( str == null || str.length() < 2){
+        return "";
+    }
+    return str.substring(1,str.length()-1);
+  }
+
+}
+PARSER_END(PGParser)
+
+/**
+* Parse root element of PG grammar
+*/
+PGGrammar Grammar() throws IOException:
+{
+      PGGrammar parsedGrammar = null;
+}
+{
+
+  parsedGrammar = ClassDirective()
+
+  Productions(parsedGrammar)
+  < EOF >
+  {
+    return parsedGrammar;
+  }
+}
+
+PGGrammar ClassDirective():
+{
+    String uri,n;
+    Token t,o;
+    PGGrammar result = null;
+    PGNonTerminal nonTerminal = null;
+}
+{
+      ("class" | "grammar")
+      t = Name() { result = new PGGrammar(t.toString()); }
+      ":"
+      nonTerminal = ExportedNonTerminal()
+      {
+        result.addExportedNonTerminal(nonTerminal);
+        result.setDefaultExportedNonTerminal(nonTerminal);
+      }
+      ( "," nonTerminal=ExportedNonTerminal() { result.addExportedNonTerminal(nonTerminal);} )*
+    (
+      ( "prefix"
+        (
+            t=Name()   { result.setPrefix(t.toString()); }
+          | t=<STRING> { result.setPrefix(unwrap(t.toString())); }
+        )
+      )
+      |
+      ( "options"
+        t=Name()
+        (
+          "=" (o=Name()|o=<NUMBER>|o=<STRING>) { result.setParserOption(t.toString(),o.toString());}
+         |                                     { result.setParserOption(t.toString(),"true"); }
+        )
+        (","
+         t=Name()
+         (
+           "=" (o=Name()|o=<NUMBER>|o=<STRING>) { result.setParserOption(t.toString(),o.toString());}
+           |                                    { result.setParserOption(t.toString(),"true"); }
+         )
+        )*
+      )
+      |
+      (
+        "imports"
+        t=Name() { result.addImport(t.toString()); }
+        ("," t=Name() { result.addImport(t.toString());})*
+      )
+      |
+      (
+        "declarations"
+        t=<EMBEDDED> { result.addDeclaration(t.toString());}
+      )
+    )*
+      { return result; }
+}
+
+void Productions(PGGrammar grammar) throws IOException:
+{
+
+}
+{
+  (
+    Structural(grammar)
+  | Lexical(grammar)
+  | Meta(grammar)
+ 
+  )*
+}
+
+void Meta(PGGrammar grammar) throws IOException:
+{
+    Token t = null;
+    String begin,end;
+    PGChoice choice = null;
+}
+{
+    "meta"
+    <PARAMS_OPEN> <LANGLE>
+        Name()
+        [
+            <QUESTION_MARK> |
+            <PLUS> |
+            <STAR>
+        ]
+     <RANGLE> <PARAMS_CLOSED>
+    
+     "::="
+        choice = LexicalConcatenation()
+     "," (t=<STRING>| t=Name())
+     {
+       begin = t.toString();
+     }
+     "," (t=<STRING>| t=Name())
+     {
+       end = t.toString();
+     }
+     [ "," (<STRING> | Name()) ]
+     
+     <DOT>
+    {
+      grammar.setMeta(new PGMeta(choice,begin,end));
+    }
+   |
+    "nometa"
+    <DOT>
+   |
+    "inject"
+    <PARAMS_OPEN> <LANGLE>
+      Name()
+      [
+          <QUESTION_MARK> |
+          <PLUS> |
+          <STAR>
+      ]
+    <RANGLE> <PARAMS_CLOSED>
+
+    "::="
+        choice = LexicalConcatenation()
+        "," t=<STRING>
+        {
+          begin = t.toString();
+        }
+        "," t=<STRING>
+        {
+          end = t.toString();
+        }
+    <DOT>
+    {
+      grammar.setInject(new PGInject(choice,begin,end));
+    }
+  | "noinject"
+    <DOT>
+}
+
+void Lexical(PGGrammar grammar) throws IOException:
+{
+    Token t = null;
+    PGTerminal terminal = null;
+    boolean fragment = false;
+    PGAlternative alternatives = null;
+}
+{
+    ["token"]
+    ["fragment" {  fragment = true; }]
+    t=Name()
+    { terminal = new PGTerminal(t.toString());
+      terminal.setFragmentFlag(fragment);
+    }
+    "::="
+    alternatives=LexicalChoice()
+    { terminal.setAlternative(alternatives); }
+    <DOT>//"."
+    {
+      grammar.addTerminal(terminal);
+    }
+}
+
+PGAlternative LexicalChoice() throws IOException:
+{
+  PGAlternative alternatives = new PGAlternative();
+  PGChoice choice = null;
+  token_source.SwitchTo(LEXICAL);
+}
+{
+  choice = LexicalConcatenation()
+  {
+    alternatives.addAlternative(choice);
+  }
+  ( <OR>//"|"
+    choice = LexicalConcatenation()
+    {
+      alternatives.addAlternative(choice);
+    }
+  )*
+  {
+    token_source.SwitchTo(DEFAULT);
+      return alternatives;
+  }
+}
+
+PGChoice LexicalConcatenation() throws IOException:
+{
+  PGChoice choice = new PGChoice();
+  PGElement element = null;
+  
+}
+{
+  element = LexicalSimple()
+  {
+    choice.addElement(element);
+  }
+  (
+    element = LexicalSimple()
+    {
+      choice.addElement(element);
+    }
+  )*
+  {
+    
+    return choice;
+  }
+}
+
+PGElement LexicalSimple() throws IOException:
+{
+  Token t = null;
+  PGElement result = null;
+  boolean needsParentheses = false;
+  boolean isNegated = false;
+}
+{
+  (
+        t=<STRING> { result = new PGLiteral(unwrap(t.toString())); }
+      |    t=<LEXICAL_CHAR>   { result = new PGLiteral(t.toString()); }
+      |   t=Name()   { result = new PGTerminal(t.toString()); }
+      |   t=<CHARS_EMPTY> { result = new PGCharacters(); }
+      |   t=<NOT_EMPTY>
+          {
+            result = new PGCharacters();
+            ((PGCharacters)result).setNegated(true);
+          }
+      |   (   (  <CHARS_OPEN>
+               | <NOT> { isNegated = true; }
+              )
+              [ result=LexicalChars() ]
+              {
+                    if( result == null )
+                    {
+                      result = new PGCharacters();
+                    }
+                  ((PGCharacters)result).setNegated(isNegated);
+              }
+            <CHARS_CLOSE>
+          )
+      |     ( <LPAR>//"("
+                result=LexicalChoice()
+            <RPAR>//")"
+            {
+              needsParentheses = true;
+            }
+           )
+  )
+  [        <QUESTION_MARK> {result.setCardinality(PGElement.Cardinality.OPTIONAL);}
+    |    <STAR> {result.setCardinality(PGElement.Cardinality.ITERATION);}
+    |    <PLUS> {result.setCardinality(PGElement.Cardinality.POSITIVE_ITERATION);}
+  ]
+  {
+    return result;
+  }
+}
+
+
+//TODO - Fix range handling when range contains letter and digit mixed
+PGCharacters LexicalChars():
+{
+      Token t = null;
+      String current = null;
+      String tmp = null;
+    boolean rangestart = false; // true when dash creates range
+    String separator = ""; // set to "-" when range active
+    String s;
+    PGCharacters characters = new PGCharacters();
+}
+{
+  (
+    (
+      t = < CHARS_STRING > { current = unwrap(t.toString()); } |
+      t = < CHARS_CHAR >   { current = t.toString(); }
+      )
+      (
+        (
+          
+            <CHARS_DASH>
+            (
+              (
+              t = < CHARS_STRING > { tmp = unwrap(t.toString()); } |
+              t = < CHARS_CHAR >   { tmp = t.toString(); }
+              )
+              {
+              char from = current.charAt(0);
+              char to = tmp.charAt(0);
+              PGCharacters.PGCharactersRange range = new PGCharacters.PGCharactersRange(from,to);
+              characters.addElement(range);
+              current = null;
+              }
+            |
+            {
+              PGCharacters.PGCharactersElement element = new PGCharacters.PGCharactersElement(current);
+              characters.addElement(element);
+              element = new PGCharacters.PGCharactersElement("-");
+              characters.addElement(element);
+              current = null;
+            }
+          )
+        )
+      |
+        [ <CHARS_COMMA>]
+        {
+          PGCharacters.PGCharactersElement element = new PGCharacters.PGCharactersElement(current);
+          characters.addElement(element);
+          current = null;
+        }
+      )
+  )+
+  {
+    if( current != null )
+    {
+      PGCharacters.PGCharactersElement element = new PGCharacters.PGCharactersElement(current);
+      characters.addElement(element);
+      current = null;
+    }
+    return characters;
+  }
+}
+
+void Structural(PGGrammar grammar) throws IOException:
+{
+  Token t;
+  PGNonTerminal nonTerminal = null;
+  PGChoice choice = null;
+}
+{
+  <LANGLE>
+      t=Name()
+  <RANGLE>
+  {
+    nonTerminal = grammar.getNonTerminal(t.toString());
+    if( nonTerminal == null )
+    {
+        nonTerminal = new PGNonTerminal(t.toString());
+        grammar.addNonTerminal(nonTerminal);
+    }
+    grammar.addToNonterminalList(nonTerminal);
+  }
+
+  (
+    <PLUGIN_PROP_TAG_OPEN>
+        (
+          <STRINGRULE>
+          {
+            nonTerminal.setStringRule(true);          }        )?
+    <PLUGIN_PROP_TAG_CLOSE>  )?
+
+  "::="
+
+  choice=StructuralChoice(grammar)
+  {
+    nonTerminal.addAlternative(choice);
+  }
+  (
+    <OR>//"|"
+    choice=StructuralChoice(grammar)
+    {
+    nonTerminal.addAlternative(choice);
+    }
+  )*
+  <DOT>//"."
+  {
+    //TODO
+  }
+  
+}
+
+PGChoice StructuralChoice(PGGrammar grammar) throws IOException:
+{
+    PGElement element = null;
+    PGChoice choice = new PGChoice();
+    PGPluginGeneratorProperties pluginGeneratorProperties = null;
+}
+{
+    pluginGeneratorProperties = PluginGeneratorProperties()
+    {
+      choice.setPluginGeneratorProperties(pluginGeneratorProperties);
+    }
+    element=Primary(grammar)
+    {
+      choice.addElement(element);
+    }
+    (
+      element=Primary(grammar)
+      {
+        choice.addElement(element);
+      }
+    )*
+    {
+      return choice;
+    }
+}
+
+PGElement Primary(PGGrammar grammar) throws IOException:
+{
+  PGElement element = null;
+}
+{
+  (
+    element = Literal()
+  | element = Terminal()
+  | element = NonTerminal(grammar)
+  | element = Inline()
+  | element = Generation()
+  | (
+        <LPAR>//"("
+            element = Choices(grammar)
+            
+           <RPAR>[//")"[
+               <STAR> {element.setCardinality(PGElement.Cardinality.ITERATION);}
+             | <PLUS> {element.setCardinality(PGElement.Cardinality.POSITIVE_ITERATION);}
+             | <QUESTION_MARK> {element.setCardinality(PGElement.Cardinality.OPTIONAL);}
+            ]
+    )
+  )
+  {
+    return element;
+  }
+}
+
+PGAlternative Choices(PGGrammar grammar) throws IOException:
+{
+  PGAlternative alternatives = new PGAlternative();
+  PGChoice choice = null;
+}
+{
+  choice=StructuralChoice(grammar)
+  {
+    alternatives.addAlternative(choice);
+  }
+  (
+    <OR>//"|"
+    choice=StructuralChoice(grammar)
+    {
+    alternatives.addAlternative(choice);
+    }
+  )*
+  {
+    return alternatives;
+  }
+}
+
+//Parse string literal
+PGLiteral Literal() throws IOException:
+{
+  Token t = null;
+  PGLiteral literal = null;
+  Usage usage = null;
+}
+{
+  t=<STRING>
+  usage=Use()
+  {
+    literal = new PGLiteral(t.toString());
+    literal.setUsage(usage);
+    return literal;
+  }
+}
+
+PGTerminal Terminal() throws IOException:
+{
+  PGTerminal terminal = null;
+  Token t = null;
+  Usage usage = null;
+}
+{
+  (     "EOF" { terminal = new PGTerminal("EOF"); }
+    |     t=Name() { terminal = new PGTerminal(t.toString()); }
+  )
+  usage=Use()
+  {
+    terminal.setUsage(usage);
+    return terminal;
+  }
+}
+
+PGNonTerminal NonTerminal(PGGrammar grammar) throws IOException:
+{
+  PGNonTerminal nonTerminal = null;
+  Token t = null;
+  Usage usage = null;
+}
+{
+  <LANGLE>
+      t=Name()
+      {
+        nonTerminal = grammar.getNonTerminal(t.toString());
+        if( nonTerminal == null )
+        {
+          nonTerminal = new PGNonTerminal(t.toString());
+          grammar.addNonTerminal(nonTerminal);
+        }
+        nonTerminal.setUsed(true);
+        nonTerminal = new PGNonTerminal(t.toString());
+    }
+    //Ignore nonterminal arguments
+    (
+      t=<STRING>
+    | t=<EMBEDDED>
+    )*
+  <RANGLE>
+  [
+        <STAR> {nonTerminal.setCardinality(PGElement.Cardinality.ITERATION);}
+      | <PLUS> {nonTerminal.setCardinality(PGElement.Cardinality.POSITIVE_ITERATION);}
+      | <QUESTION_MARK> {nonTerminal.setCardinality(PGElement.Cardinality.OPTIONAL);}
+  ]
+  [
+      <PARAMS_OPEN> [Names()] <PARAMS_CLOSED>
+  ]
+  usage=Use()
+  {
+    nonTerminal.setUsage(usage);
+    return nonTerminal;
+  }
+}
+
+PGInline Inline() throws IOException:
+{
+    String inlineStr = "";
+    Token t = null;
+    Usage usage = null;
+}
+{
+  "{"
+  ( ( t=Name() { inlineStr += t.toString(); } )+
+      | t=<STRING> { inlineStr = unwrap(t.toString()); }
+  )
+  "}"
+  usage=Use()
+  {
+    PGInline inline = new PGInline(inlineStr);
+    inline.setUsage(usage);
+    return inline;
+  }
+}
+
+PGGeneration Generation() throws IOException:
+{
+    Token t = null;
+    Usage usage = null;
+    PGGeneration generation = null;
+}
+{
+  t=<EMBEDDED>
+  usage=Use()
+  {
+        generation = new PGGeneration(t.toString());
+        generation.setUsage(usage);
+        return generation;
+  }
+}
+
+List<String> Names() :
+{
+    Token t;
+    List<String> names = new ArrayList<String>();
+}
+{
+    t=Name() {names.add(t.toString());}
+    (
+        "," t=Name() {names.add(t.toString());}
+    )*
+    {
+      return names;
+    }
+}
+
+
+
+PGNonTerminal ExportedNonTerminal():
+{
+    Token t;
+    char repeater = 0;
+    PGNonTerminal nonTerminal = null;
+}
+{
+    <LANGLE>
+    t=Name()
+    {
+      nonTerminal = new PGNonTerminal(t.toString());
+      nonTerminal.setExported(true);
+    }
+    <RANGLE>
+    [  <STAR> { nonTerminal.setExportedFlag(PGNonTerminal.EXPORTED_ITERATION,true); } |
+       <PLUS> { nonTerminal.setExportedFlag(PGNonTerminal.EXPORTED_POSITIVE_ITERATION,true);} |
+       <QUESTION_MARK> { nonTerminal.setExportedFlag(PGNonTerminal.EXPORTED_OPTIONAL,true);}
+    ]
+    {
+        return nonTerminal;
+    }
+}
+
+/** Parse usage description. */
+Usage Use() throws IOException :
+{
+    Token t;
+    Usage use = new Usage();
+    StringBuilder annotation = new StringBuilder();
+}
+{
+    // Old (hopefully) soon obsolete JJCRS notations.
+    (
+        {use.setTouched(true);}
+        "^" ["^" {use.setLinear(true);}]    t=<VAR>
+        {use.setDefinition(true); use.setName(t.toString());}
+    |
+        [
+            {use.setTouched(true);} 
+            t=MetaVar() {use.setBuffer(true); use.setName(use.getName() + t.toString()); }
+            [ t=<NUMBER> {use.setName(use.getName() + t.toString()); } ]
+        ]
+        [
+            {use.setTouched(true);} 
+            "!" {use.setUse(true); }
+            [ "!" {use.setFreeVar(true);}
+              [ "!" {use.setFreshVar(true);} ]
+            ]
+        |
+            {use.setTouched(true);} 
+            "$"
+            ( "$" {use.setEmbedded(true);}
+            | {use.setLiteral(true);}
+            )
+        |
+            {use.setTouched(true);} 
+            "@" {use.setMeta(true); }
+        ]
+    )
+    // 
+    (
+        ":" {annotation.append(":");}
+        (
+            // :Name means "convert using static String Name(String) method".
+            t=Name() {use.setTouched(true); use.setConverted(t.toString() + "(" + use.getConverted() + ")"); use.setWasConverted(true);}
+        |
+            // :«Expr» means "convert using code of type String where # is substituted by the value!
+            t=<EMBEDDED> {use.setTouched(true); use.setConverted(unwrap(t.toString()).replaceAll("#", use.getConverted())); use.setWasConverted(true);}
+        |
+            // :# means that whatever was generated is stored and can be referenced with the meta-application #[...] with explicit subterm group.
+            t=MetaVar() {use.setTouched(true); use.setBuffer(true); use.setName(t.toString()); }
+        |
+            // :{category} means reparse using category. note: DOES NOT TOUCH!
+            "{" t=Name() "}" {use.setCategory(t.toString());}
+        )
+    )*
+    {
+        return use;
+    }
+}
+
+void PGPluginProperty(PGPluginGeneratorProperties properties) :
+{
+  Token t = null;}
+{
+  (    <OUTLINE>
+    (
+      t = <STRING> { properties.setFormatString(unwrap(t.toString()));}
+      |
+      t = <HIDDEN>     )
+    |
+    (
+      (<ID>  { properties.setRefMode(PGPluginGeneratorProperties.RefMode.ID); }
+      | <REF> { properties.setRefMode(PGPluginGeneratorProperties.RefMode.REFERENCE); } )
+      t = <ELEMENT_IDX> { properties.setIdx(Integer.parseInt(unwrap(t.toString()))); }
+      t = <STRING> { properties.setIdxRefLabel(unwrap(t.toString())); }    )
+    |
+    (
+      <LEAF> { properties.setLeaf(true); }    )
+  )}
+
+/** Parse plugin generator properties **/
+PGPluginGeneratorProperties PluginGeneratorProperties()throws IOException :
+{    PGPluginGeneratorProperties pluginGeneratorProperties = new PGPluginGeneratorProperties();
+}
+{
+  (
+    <PLUGIN_PROP_TAG_OPEN>
+    (
+      PGPluginProperty(pluginGeneratorProperties)
+      (
+        <COMMA>
+        PGPluginProperty(pluginGeneratorProperties)      )*    )?
+    <PLUGIN_PROP_TAG_CLOSE>  )?
+  {
+    return pluginGeneratorProperties;
+  }}
+
+/** Spaces and line comments are just skipped. */
+<DEFAULT> SKIP : { "/*" : DEFAULT_COMMENT }
+<DEFAULT_COMMENT> SKIP : { "*/" : DEFAULT | <~[] > }
+<LEXICAL> SKIP : { "/*" : LEXICAL_COMMENT }
+<LEXICAL_COMMENT> SKIP : { "*/" : LEXICAL | <~[] > }
+<PARAMS> SKIP : { "/*" : PARAMS_COMMENT }
+<PARAMS_COMMENT> SKIP : { "*/" : PARAMS | <~[] > }
+
+<DEFAULT> SKIP : { " " | "\t" | "\n" | "\r"| "//" : DEFAULT_IN_LINE_COMMENT }
+<DEFAULT_IN_LINE_COMMENT> SKIP : { "\n" : DEFAULT | "\r" : DEFAULT | <~[] > }
+<LEXICAL> SKIP : { " " | "\t" | "\n" | "\r"| "//" : LEXICAL_IN_LINE_COMMENT }
+<LEXICAL_IN_LINE_COMMENT> SKIP : { "\n" : LEXICAL | "\r" : LEXICAL | <~[] > }
+<PARAMS> SKIP : { " " | "\t" | "\n" | "\r"| "//" : PARAMS_IN_LINE_COMMENT }
+<PARAMS_IN_LINE_COMMENT> SKIP : { "\n" : PARAMS | "\r" : PARAMS | <~[] > }
+
+<PLUGIN_PROPERTIES> SKIP :{ " " | "\n" | "\r" | "\t" }
+
+/** Complex tokens. */
+Token Name() :
+{
+    Token t;
+}
+{
+    ( t=<VAR> | t=<CONST> ) {return t;}
+}
+
+Token MetaVar() :
+{
+    Token t;
+}
+{
+    ( t=<METAVAR> | t="#" ) {return t;}
+}
+
+<DEFAULT> TOKEN:
+{
+    < PARAMS_OPEN : "[" >:DEFAULT |
+    < PARAMS_CLOSED : "]">:DEFAULT |
+    < PLUGIN_PROP_TAG_OPEN : "/@" >: PLUGIN_PROPERTIES
+}
+
+<PLUGIN_PROPERTIES,DEFAULT,LEXICAL> TOKEN:
+{    < STRING : "\"" ( ~["\n","\\","\""] | "\\" ~["\n"])* "\"" | "'" ( ~["\n","\\","'"] | "\\" ~["\n"])* "'" >
+}
+
+<PLUGIN_PROPERTIES> TOKEN:
+{    < OUTLINE : "outline"> |
+    < HIDDEN : "hidden"> |
+    < LEAF : "leaf"> |
+    < STRINGRULE : "stringrule"> |
+    < ID : "id"> |
+    < REF : "ref"> |
+    < COMMA : ","> |
+    < ELEMENT_IDX: "{" (["0"-"9"])+ "}" > |
+    < PLUGIN_PROP_TAG_CLOSE : "@/" >: DEFAULT
+}
+
+<DEFAULT,LEXICAL> TOKEN :
+{
+    < OR : "|" > |
+    < LANGLE : "<" | "\u27E8" | "&lang;" > |
+    < RANGLE : ">" | "\u27E9" | "&rang;" > |
+    < DASH : "-" | "&" ["n","m"] "dash;" > |
+    < NOT : "~[" | "\u00AC[" | "&not;[" | "[^" >:LEX_CHARS |
+    < NOT_EMPTY : "~[" (" " | "\t" | "\n" | "\r" )* "]" > |
+    < EMBEDDED :
+        "{{" ( ~["}"] | "}" ~["}"]  )* "}}"
+        | "[[" ( ~["]"] | "]" ~["]"]  )* "]]"
+        | "%{" ( ~["%"] | "%" ~["}"]  )* "%}"
+        | "\u00AB" ( ~["\u00AB","\u00BB"] )* "\u00BB" // «...»
+        | "\u27E6" ( ~["\u27E6","\u27E7"] )* "\u27E7" // ⟦...⟧
+        | "\u27EA" ( ~["\u27EA","\u27EB"] )* "\u27EB" // ⟪...⟫
+    > |
+    
+    < VAR : <LOWER> <TAIL> > |
+    < CONST : ("$"|<UPPER>) <TAIL> > |
+    < NUMBER : (<DIGIT>)+ > |
+    < METAVAR : "#" <TAIL> > |
+    < #DIGIT : ["0"-"9"] >           |
+    < #LOWER : ["a"-"z"] >           |
+    < #UPPER : ["A"-"Z"] >           |
+    < #LETTER : <LOWER> | <UPPER> >  |
+    < #TAIL : (([".","-","_"])* (<LETTER>|<DIGIT>))* > |
+
+    < LPAR : "(">|
+    < RPAR : ")">|
+
+    <STAR : "*">|
+    <QUESTION_MARK : "?">|
+    <PLUS : "+"> |
+    <DOT : ".">  
+}
+
+<LEXICAL> TOKEN:
+{
+  <CHARS_OPEN : "[">:LEX_CHARS |
+  <CHARS_EMPTY : "[" (" " | "\t" | "\n" | "\r" )* "]" >:LEXICAL
+}
+
+<LEX_CHARS> TOKEN:
+{
+  < CHARS_STRING : "\"" ( ~["\n","\\","\""] | "\\" ~["\n"])* "\"" | "'" ( ~["\n","\\","'"] | "\\" ~["\n"])* "'" >:LEX_CHARS |
+  < CHARS_CHAR :
+        ("#x" | "\\u" | "\\x") (["0"-"9","A"-"Z","a"-"z"])+
+        | "\\" ["0"-"3"] (["0"-"7"])+
+        | "\\" ~[]
+        | ~["-","]",","]
+   >:LEX_CHARS |
+   < CHARS_DASH : "-">:LEX_CHARS |
+   < CHARS_COMMA : ",">:LEX_CHARS|
+   < CHARS_CLOSE : "]">:LEXICAL
+}
+
+<LEXICAL> TOKEN:
+{
+  < LEXICAL_CHAR :
+        ("#x" | "\\u" | "\\x") (["0"-"9","A"-"Z","a"-"z"])+
+        | "\\" ["0"-"3"] (["0"-"7"])+
+        | "\\" ~[]
+        | ~["["]
+   >
+}
+
+<DEFAULT> TOKEN:
+{
+  < CHAR :
+        ("#x" | "\\u" | "\\x") (["0"-"9","A"-"Z","a"-"z"])+
+        | "\\" ["0"-"3"] (["0"-"7"])+
+        | "\\" ~[]
+        | ~[]
+    >
+}
