@@ -35,6 +35,14 @@
                     </execution>
                 </executions>
             </plugin>
+            <plugin>
+                <groupId>org.eclipse.tycho</groupId>
+                <artifactId>tycho-p2-repository-plugin</artifactId>
+                <version>${r"${tycho-version}"}</version>
+                <configuration>
+                    <includeAllDependencies>${arguments.includeAllDependencies?c}</includeAllDependencies>
+                </configuration>
+            </plugin>
         </plugins>
     </build>
 </project>
