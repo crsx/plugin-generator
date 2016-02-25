@@ -121,3 +121,10 @@ You need to have maven v3+ installed on your system in order to build the plugin
 
 * `--updatesite` - utility will generate all sources into temporary directory and then builds them using maven. After the build is done
 eclipse update site repository is moved to location specified by `--output` command line argument. This option can be also combined with `--zip` switch (in that case, zip archive containing eclipse update repository is created).
+
+### Plugin dependencies
+
+By default maven pom.xml files in generated plugins are configured not to include dependencies in the resulting repositories. 
+This can be changed by using `-d`/`--include_dependencies` when running plugin generator. Plugin repository will then contain all dependencies. 
+This can increase repository size significantly (Eclipse repository of simple plugin with all Xtext dependecies has ~90MiB).
+

@@ -96,6 +96,7 @@ public final class Arguments {
     boolean zip = false;
     boolean snapshot = true;
     boolean targetDefinitionUse = true;
+    boolean includeAllDependencies = false;
     String errorMsg = null;
     
     private Arguments(){
@@ -177,7 +178,11 @@ public final class Arguments {
             arguments.targetDefinitionUse = true;
         }else if ( matchOption("nt","-notarget",arg)){
             arguments.targetDefinitionUse = false;
-        }else if( matchOption("tf","-targetfile",arg)){
+        }else if ( matchOption("d","-include_dependencies",arg)){
+            arguments.includeAllDependencies = true;
+        }else if ( matchOption("nd","-no_include_dependencies",arg)){
+            arguments.includeAllDependencies = false;
+        }else if ( matchOption("tf","-targetfile",arg)){
             arguments.customTargetDefinitionFile = retrieveArgument(idx, args, arguments, null);
             arguments.targetDefinitionUse = true;
             ++next;
@@ -358,6 +363,10 @@ public final class Arguments {
     
     public boolean isTargetDefinitionUse(){
         return targetDefinitionUse;
+    }
+    
+    public boolean isIncludeAllDependencies(){
+        return includeAllDependencies;
     }
     
     public String getTargetDefinitionFile(){

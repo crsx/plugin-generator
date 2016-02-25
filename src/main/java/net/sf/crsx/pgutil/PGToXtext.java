@@ -39,19 +39,19 @@ public final class PGToXtext {
     
     private static final String HELP_STR = "Usage: java -jar pgenerator.jar [options] inputfile.pg\n\n"
                                           +"Options:\n"
-                                          +"-o / --output       <output_location>\t Specify output location\n"
-                                          +"-s / --start        <NonterminalName>\t Specify starting nonterminal\n"
-                                          +"-e / --extension    <extension>\t\t Specify extension for the plugin\n"
-                                          +"-v / --version      <version>\t\t Specify version of generated plugins\n"
-                                          +"-r / --organization <vendor>\t\t Specify vendor of generated plugins\n"
-                                          +"-m / --maven        <maven_location>\t Specify path to maven directory\n"
-                                          +"-g / --single\t\t\t\t Create plugin for single grammar\n"
-                                          +"-x / --xtext\t\t\t\t Create just xtext grammar for source grammar\n"
-                                          +"-c / --crsx\t\t\t\t Create CRSX plugin with embedded grammar\n"
-                                          +"-a / --all\t\t\t\t Create CRSX plugin with support for embedded grammars and also plugins for embedded languages\n"
-                                          +"-b / --build\t\t\t\t Build generated sources using maven\n"
-                                          +"-u / --updatesite\t\t\t Produce Eclipse update site repository (using maven build)\n"
-                                          +"-z / --zip\t\t\t\t Create single zip archive\n"
+                                          +"-o  / --output       <output_location>\t Specify output location\n"
+                                          +"-s  / --start        <NonterminalName>\t Specify starting nonterminal\n"
+                                          +"-e  / --extension    <extension>\t\t Specify extension for the plugin\n"
+                                          +"-v  / --version      <version>\t\t Specify version of generated plugins\n"
+                                          +"-r  / --organization <vendor>\t\t Specify vendor of generated plugins\n"
+                                          +"-m  / --maven        <maven_location>\t Specify path to maven directory\n"
+                                          +"-g  / --single\t\t\t\t Create plugin for single grammar\n"
+                                          +"-x  / --xtext\t\t\t\t Create just xtext grammar for source grammar\n"
+                                          +"-c  / --crsx\t\t\t\t Create CRSX plugin with embedded grammar\n"
+                                          +"-a  / --all\t\t\t\t Create CRSX plugin with support for embedded grammars and also plugins for embedded languages\n"
+                                          +"-b  / --build\t\t\t\t Build generated sources using maven\n"
+                                          +"-u  / --updatesite\t\t\t Produce Eclipse update site repository (using maven build)\n"
+                                          +"-z  / --zip\t\t\t\t Create single zip archive\n"
                                           +"-xv / --xtextVersion\t\t\t Specify Xtext version to use\n"
                                           +"-xu / --xtextUpdateSite \t\t Specify Xtext update site to use\n"
                                           +"-sn / --snapshot \t\t\t Generate snapshot (default)\n"
@@ -59,7 +59,9 @@ public final class PGToXtext {
                                           +"-t  / --target\t\t\t\t Use target definition file for building (default)\n"
                                           +"-nt / --notarget \t\t\t Do not use target definition file for building\n"
                                           +"-tf / --targetfile <file> \t\t Specify custom target definition file\n"
-                                          +"-h / --help\t\t\t\t Show this help";
+                                          +"-d  / --include_dependencies \t\t Include all dependencies in update site\n"
+                                          +"-nd / --no_include_dependencies \t Do not include dependencies in update site (default)\n"
+                                          +"-h  / --help\t\t\t\t Show this help";
     
     private static final Logger LOGGER = Logger.getLogger(Logger.GLOBAL_LOGGER_NAME);
     
