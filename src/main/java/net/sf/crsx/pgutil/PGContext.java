@@ -165,7 +165,11 @@ public class PGContext {
     }
     
     public List<String> getInstanceVarList(){
-        return instanceVarList;
+        return new ArrayList<String>(instanceVarList);
+    }
+
+    public void clearInstanceVarList(){
+        instanceVarList.clear();
     }
     
     public void insertVarStub(){

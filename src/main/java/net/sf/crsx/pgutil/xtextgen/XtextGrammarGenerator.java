@@ -349,6 +349,7 @@ public class XtextGrammarGenerator implements PGElementVisitor{
         printStream.println(String.format("generate %s \"%s\"%n%n",grammarName,namespaceURI));
         
         for( PGNonTerminal nonTerminal : grammar.getNonTerminals() ){
+            currentContext.clearInstanceVarList();
             if(nonTerminal.isStringRule()){
                 currentContext.setStringRule(true);
                 currentContext.destroyInstance();
