@@ -346,7 +346,8 @@ public class XtextGrammarGenerator implements PGElementVisitor{
         String namespaceURI = Util.generateNamespaceURIForQualifiedName(grammar.getGrammarClassName());
         String grammarName = grammar.getName();
         
-        printStream.println(String.format("generate %s \"%s\"%n%n",grammarName,namespaceURI));
+        printStream.println(String.format("generate %s \"%s\"%n%n", grammarName.toLowerCase(),
+                namespaceURI));
         
         for( PGNonTerminal nonTerminal : grammar.getNonTerminals() ){
             currentContext.clearInstanceVarList();

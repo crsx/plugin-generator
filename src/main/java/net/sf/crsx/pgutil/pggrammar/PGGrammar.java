@@ -263,7 +263,7 @@ public class PGGrammar implements PGVisitable {
         }
         
         String [] parts = className.split("\\.");
-        return parts[parts.length-1].toLowerCase();
+        return parts[parts.length-1];
     }
     
     public PGOutlineHints getOutlineHints(){

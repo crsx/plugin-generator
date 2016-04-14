@@ -142,7 +142,7 @@ public class SingleGrammarPlugin extends Plugin{
     public void createBaseProjectDirectoryStructure(){
         //This is the root project of main directory
         File projectRootDir = baseProject.getProjectDirectory();
-        String grammarNameUpper =  grammar.getName().toUpperCase();
+        String grammarName = grammar.getName();
         
         //Add src directory
         File srcDir = new File(projectRootDir,"src");
@@ -165,7 +165,7 @@ public class SingleGrammarPlugin extends Plugin{
         baseProject.addDirectory(basePackage);
         
         //Add xtext file
-        File xtextFile = new File(basePackage,String.format("%s.xtext",grammarNameUpper));
+        File xtextFile = new File(basePackage,String.format("%s.xtext",grammarName));
         SingleXtextGrammarFileProvider xtextProvider = new SingleXtextGrammarFileProvider(grammar);
         baseProject.addFileCreateTask(xtextFile, xtextProvider);
         
@@ -189,21 +189,21 @@ public class SingleGrammarPlugin extends Plugin{
         baseProject.addFileCreateTask(pluginXMLFile, pluginXMLFileProvider);
         
         //Add Generate<GRAMMAR>.mwe2
-        String mweFilename = String.format("Generate%s.mwe2", grammarNameUpper);
+        String mweFilename = String.format("Generate%s.mwe2", grammarName);
         File mweFile = new File(basePackage,mweFilename);
         TemplateFileProvider mwe2FileProvider = new TemplateFileProvider("single/base/Generate.mwe.ftl",
                 uniDataProvider);
         baseProject.addFileCreateTask(mweFile, mwe2FileProvider);
         
         //Add <GRAMMAR>RuntimeModule.java
-        String runtimeModuleFilename = String.format("%sRuntimeModule.java", grammarNameUpper);
+        String runtimeModuleFilename = String.format("%sRuntimeModule.java", grammarName);
         File runtimeModuleFile = new File(basePackage,runtimeModuleFilename);
         TemplateFileProvider runtimeModuleFileProvider = new TemplateFileProvider("single/base/RuntimeModule.java.ftl",
                 uniDataProvider);
         baseProject.addFileCreateTask(runtimeModuleFile, runtimeModuleFileProvider);
         
         //Add <GRAMMAR>StandaloneSetup.java
-        String standaloneSetupFilename = String.format("%sStandaloneSetup.java",grammarNameUpper);
+        String standaloneSetupFilename = String.format("%sStandaloneSetup.java",grammarName);
         File standaloneSetupFile = new File(basePackage, standaloneSetupFilename);
         TemplateFileProvider standaloneSetupFileProvider = new TemplateFileProvider("single/base/StandaloneSetup.java.ftl",
                 uniDataProvider);
@@ -212,7 +212,7 @@ public class SingleGrammarPlugin extends Plugin{
         //Add <GRAMMAR>Formatter.java
         File formattingPackage = new File(basePackage,"formatting");
         baseProject.addDirectory(formattingPackage);
-        String formatterFilename = String.format("%sFormatter.java",grammarNameUpper);
+        String formatterFilename = String.format("%sFormatter.java",grammarName);
         File formatterFile = new File(formattingPackage,formatterFilename);
         TemplateFileProvider formatterFileProvider = new TemplateFileProvider("single/base/Formatter.java.ftl",
                 uniDataProvider);
@@ -221,7 +221,7 @@ public class SingleGrammarPlugin extends Plugin{
         //Add <GRAMMAR>Generator.xtend
         File generatorPackage = new File(basePackage,"generator");
         baseProject.addDirectory(generatorPackage);
-        String generatorFilename = String.format("%sGenerator.xtend",grammarNameUpper);
+        String generatorFilename = String.format("%sGenerator.xtend",grammarName);
         File generatorFile = new File(generatorPackage,generatorFilename);
         TemplateFileProvider generatorFileProvider = new TemplateFileProvider("single/base/Generator.xtend.ftl",
                 uniDataProvider);
@@ -230,7 +230,7 @@ public class SingleGrammarPlugin extends Plugin{
         //Add <GRAMMAR>ScopeProvider.java
         File scopingPackage = new File(basePackage,"scoping");
         baseProject.addDirectory(scopingPackage);
-        String scopeProviderFilename = String.format("%sScopeProvider.java",grammarNameUpper);
+        String scopeProviderFilename = String.format("%sScopeProvider.java",grammarName);
         File scopeProviderFile = new File(scopingPackage,scopeProviderFilename);
         TemplateFileProvider scopeProviderFileProvider = new TemplateFileProvider("single/base/ScopeProvider.java.ftl",
                 uniDataProvider);
@@ -239,7 +239,7 @@ public class SingleGrammarPlugin extends Plugin{
         //Add <GRAMMAR>JavaValidator.java
         File validationPackage = new File(basePackage,"validation");
         baseProject.addDirectory(validationPackage);
-        String validatorFilename = String.format("%sJavaValidator.java", grammarNameUpper);
+        String validatorFilename = String.format("%sJavaValidator.java", grammarName);
         File validatorFile = new File(validationPackage,validatorFilename);
         TemplateFileProvider validatorFileProvider = new TemplateFileProvider("single/base/JavaValidator.java.ftl",
                 uniDataProvider);
@@ -307,7 +307,7 @@ public class SingleGrammarPlugin extends Plugin{
      */
     public void createUIProjectDirectoryStructure(){
         File projectRootDir = uiProject.getProjectDirectory();
-        String grammarNameUpper =  grammar.getName().toUpperCase();
+        String grammarName =  grammar.getName();
         
         //Add build.properties
         File buildProperties = new File(projectRootDir,"build.properties");
@@ -343,7 +343,7 @@ public class SingleGrammarPlugin extends Plugin{
         uiProject.addDirectory(basePackage);
         
         //Add <GRAMMAR>UiModule.java
-        String uiModuleFilename = String.format("%sUiModule.java",grammarNameUpper);
+        String uiModuleFilename = String.format("%sUiModule.java",grammarName);
         File uiModuleFile = new File(basePackage,uiModuleFilename);
         TemplateFileProvider uiModuleFileProvider = new TemplateFileProvider("single/ui/UiModule.java.ftl",
                 uniDataProvider);
@@ -363,14 +363,14 @@ public class SingleGrammarPlugin extends Plugin{
         File labelingDir = new File(basePackage,"labeling");
         uiProject.addDirectory(labelingDir);
         
-        String descriptionLabelProviderFilename = String.format("%sDescriptionLabelProvider.java",grammarNameUpper);
+        String descriptionLabelProviderFilename = String.format("%sDescriptionLabelProvider.java",grammarName);
         File descriptionLabelProviderFile = new File(labelingDir,descriptionLabelProviderFilename);
         TemplateFileProvider descriptionLabelProviderFileProvider = new TemplateFileProvider("single/ui/DescriptionLabelProvider.java.ftl",
                 uniDataProvider);
         uiProject.addFileCreateTask(descriptionLabelProviderFile, descriptionLabelProviderFileProvider);
         
         //Add <GRAMMAR>LabelProvider.java
-        String labelProviderFilename = String.format("%sLabelProvider.java",grammarNameUpper);
+        String labelProviderFilename = String.format("%sLabelProvider.java", grammarName);
         File labelProviderFile = new File(labelingDir,labelProviderFilename);
         TemplateFileProvider labelProviderFileProvider = new TemplateFileProvider("single/ui/LabelProvider.java.ftl",
                 uniDataProvider);
@@ -380,7 +380,7 @@ public class SingleGrammarPlugin extends Plugin{
         File outlineDir = new File(basePackage,"outline");
         uiProject.addDirectory(outlineDir);
         
-        String outlineTreeProviderFilename = String.format("%sOutlineTreeProvider.java",grammarNameUpper);
+        String outlineTreeProviderFilename = String.format("%sOutlineTreeProvider.java",grammarName);
         File outlineTreeProviderFile = new File(outlineDir,outlineTreeProviderFilename);
         TemplateFileProvider outlineTreeProviderFileProvider = new TemplateFileProvider("single/ui/OutlineTreeProvider.java.ftl",
                 uniDataProvider);
@@ -390,7 +390,7 @@ public class SingleGrammarPlugin extends Plugin{
         File quickfixDir = new File(basePackage,"quickfix");
         uiProject.addDirectory(quickfixDir);
         
-        String quickfixProviderFilename = String.format("%sQuickfixProvider.java",grammarNameUpper);
+        String quickfixProviderFilename = String.format("%sQuickfixProvider.java",grammarName);
         File quickfixProviderFile = new File(quickfixDir,quickfixProviderFilename);
         TemplateFileProvider quickfixProviderFileProvider = new TemplateFileProvider("single/ui/QuickfixProvider.java.ftl",
                 uniDataProvider);
@@ -457,24 +457,24 @@ public class SingleGrammarPlugin extends Plugin{
         public UniversalDataProvider(PGGrammar grammar){
             this.grammar = grammar;
             String grammarPackage = grammar.getGrammarPackage();
-            String grammarNameUpper = grammar.getName().toUpperCase();
+            String grammarName = grammar.getName();
             String version = PGToXtext.getArguments().getVersion();
             String vendor = PGToXtext.getArguments().getVendor();
             String extensions = grammar.getExtension();
-            String module = String.format("%s.Generate%s",grammarPackage,grammarNameUpper);
+            String module = String.format("%s.Generate%s",grammarPackage,grammarName);
             String grammarURI = String.format("%s/%s.xtext",
                     getDirectoriesFromQualifiedName(grammarPackage).getPath(),
-                    grammarNameUpper);
+                    grammarName);
             String uri = Util.generateNamespaceURIForQualifiedName(grammar.getGrammarClassName());
             String grammarClassName = grammar.getGrammarClassName();
-            String mweFilename = String.format("Generate%s.mwe2", grammarNameUpper);
+            String mweFilename = String.format("Generate%s.mwe2", grammarName);
             String mwe2path = getDirectoriesFromQualifiedName(grammarPackage).getPath() + "/" + mweFilename;
             Collection<PGOutlineHint> outlineHints = grammar.getOutlineHints().getOutlineHints();
 
             
             data = new TreeMap<String,Object>();
             data.put("package", grammarPackage);
-            data.put("name", grammarNameUpper);
+            data.put("name", grammarName);
             data.put("version", version);
             data.put("vendor", vendor);
             data.put("extensions", extensions);
