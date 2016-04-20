@@ -1,0 +1,56 @@
+grammar net.sf.simplepascal.Pascal: <program>,<declaration>,<statement>,<command>,<condition>,<expr>
+
+prefix p
+
+<program> ::= (<declaration>* (<procedure> | <function>)* <statement>)? .
+
+<declaration> ::= <var_declaration> | <const_declaration>.
+
+<var_declaration> ::=  'var' <var_decl_helper> (',' <var_decl_helper>)* ';' .
+
+<var_decl_helper> ::= /@ outline "var {0}", id {0} "variable_declaration" @/ identifier (':' <type>)?.
+
+<const_declaration> ::= 'const' <const_decl_helper> (',' <const_decl_helper>)* ';'.
+
+<const_decl_helper> ::= /@ outline "const {0}({2})", id {0} "constant_declaration" @/ identifier '=' number .
+
+<statement> ::= 'begin' <command>* 'end'.
+
+<procedure> ::= /@ outline "procedure {1}{2}", id {1} "procedure_declaration" @/ 'procedure' identifier <decl_arglist> <declaration>* 'begin' <command>* 'end'.
+
+<function> ::= /@ outline "function {1}{2}", id {1} "function_declaration" @/ 'function' identifier <decl_arglist> (':' <type>)? <declaration>* 'begin' <command>* 'end'.
+
+<decl_arglist> ::= '(' (identifier (',' identifier)*)? ')'.
+
+<command> ::= identifier ':=' <expr> ';'|
+              'write' <expr> ';'|
+              'read' identifier ';' |
+              'while' <condition> 'do' <command> |
+              'if' <condition> 'then' <command> ('else' <command>)? |
+              <statement> ';'|
+              <proc_call> ';' |
+              'exit' ';'|
+              {EmptyCommand} ';'.
+
+<proc_call> ::= /@ ref {0} "procedure_declaration" @/ identifier '(' (<expr> (',' <expr>)*)? ')'.
+
+<condition> ::= <expr> ('='|'<>'|'>'|'>='|'<'|'<=') <expr>.
+
+<expr> ::= ('-')? <term> (('+'|'-') <term>)*.
+
+<term> ::= <factor> (('*'|'/') <factor>)*.
+
+<factor> ::= identifier | number | '(' <expr> ')' | <func_call>.
+
+<func_call> ::= /@ ref {0} "function_declaration" @/ identifier '(' (<expr> (',' <expr>)*)? ')' .
+
+<type> ::= 'integer' | 'real' | 'string'.
+
+<identifier> /@ stringrule @/ ::= identifier.
+
+identifier ::= [a-zA-Z] [a-zA-Z0-9]*.
+number ::= '-'? [0-9]+.
+
+skip ::= [ \t\n]+ | '{' ~('{'|'}') '}'.
+
+
